@@ -1,0 +1,12 @@
+{
+    "input": {
+        "image_url": "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/master/inputs/0014.jpg",
+        "model_name": "realesrgan-x4plus",
+        "scale": 4,
+        "tta": true,
+        "format": "png",
+        "threads": "2:2:2",
+        "tile_size": 0,
+        "gpu_id": 0
+    }
+}
