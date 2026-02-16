@@ -1,5 +1,7 @@
 FROM runpod/base:1.0.3-cuda1300-ubuntu2404
 
+LABEL org.opencontainers.image.source=https://github.com/ls-ads/runpod-real-esrgan
+
 # Build-time dependencies
 RUN apt-get update && apt-get install -y \
     wget \
@@ -21,7 +23,8 @@ RUN wget https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/reale
     rm realesrgan-ncnn-vulkan-20220424-ubuntu.zip && \
     chmod +x realesrgan-ncnn-vulkan
 
-# Copy source code from src directory
+# Copy source code and dependencies
+COPY requirements.txt pyproject.toml ./
 COPY src/*.py ./
 
 # Install Python dependencies
