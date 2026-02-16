@@ -71,12 +71,31 @@ def handler(job):
         
         if result.returncode != 0:
             log.error(f"Real-ESRGAN binary failed with return code {result.returncode}")
-            log.debug(f"Stdout: {result.stdout}")
-            log.debug(f"Stderr: {result.stderr}")
+            log.error(f"Binary Stderr: {result.stderr}")
+            
+            # Diagnostic: Check shared libraries
+            try:
+                ldd_result = subprocess.run(["ldd", binary_path], capture_output=True, text=True)
+                log.info(f"Diagnostic - ldd output:\n{ldd_result.stdout}")
+            except Exception as le:
+                log.error(f"Diagnostic - Failed to run ldd: {str(le)}")
+
+            # Diagnostic: Check for models directory (binary expects it next to itself)
+            bin_dir = os.path.dirname(os.path.abspath(binary_path))
+            models_dir = os.path.join(bin_dir, "models")
+            log.info(f"Diagnostic - Checking models dir at {models_dir}: exists={os.path.exists(models_dir)}")
+            if os.path.exists(bin_dir):
+                log.info(f"Diagnostic - bin directory contents: {os.listdir(bin_dir)}")
+
+            # Diagnostic: Environment audit
+            log.info(f"Diagnostic - LD_LIBRARY_PATH: {os.environ.get('LD_LIBRARY_PATH')}")
+            log.info(f"Diagnostic - NVIDIA_DRIVER_CAPABILITIES: {os.environ.get('NVIDIA_DRIVER_CAPABILITIES')}")
+            
             return {
                 "error": "Real-ESRGAN failed",
                 "stdout": result.stdout,
-                "stderr": result.stderr
+                "stderr": result.stderr,
+                "return_code": result.returncode
             }
         
         # 3. Process output
