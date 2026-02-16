@@ -87,9 +87,18 @@ def handler(job):
             if os.path.exists(bin_dir):
                 log.info(f"Diagnostic - bin directory contents: {os.listdir(bin_dir)}")
 
+            # Diagnostic: ICD check
+            icd_paths = ["/usr/share/vulkan/icd.d/", "/etc/vulkan/icd.d/"]
+            for path in icd_paths:
+                if os.path.exists(path):
+                    log.info(f"Diagnostic - ICD directory {path} contents: {os.listdir(path)}")
+                else:
+                    log.info(f"Diagnostic - ICD directory {path} does not exist")
+
             # Diagnostic: Environment audit
             log.info(f"Diagnostic - LD_LIBRARY_PATH: {os.environ.get('LD_LIBRARY_PATH')}")
             log.info(f"Diagnostic - NVIDIA_DRIVER_CAPABILITIES: {os.environ.get('NVIDIA_DRIVER_CAPABILITIES')}")
+            log.info(f"Diagnostic - NVIDIA_VISIBLE_DEVICES: {os.environ.get('NVIDIA_VISIBLE_DEVICES')}")
             
             return {
                 "error": "Real-ESRGAN failed",
