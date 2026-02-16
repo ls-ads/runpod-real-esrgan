@@ -1,8 +1,8 @@
-# RunPod Real-ESRGAN Worker
+# Runpod Real-ESRGAN Worker
 
-A high-performance RunPod serverless worker for image upscaling using the NCNN Vulkan implementation of Real-ESRGAN.
+A high-performance Runpod serverless worker for image upscaling using the NCNN Vulkan implementation of Real-ESRGAN.
 
-This project packages the official [Real-ESRGAN-ncnn-vulkan](https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan) binary into a RunPod-compatible Docker image, providing a highly scalable and cost-effective way to deploy state-of-the-art super-resolution.
+This project packages the official [Real-ESRGAN-ncnn-vulkan](https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan) binary into a Runpod-compatible Docker image, providing a highly scalable and cost-effective way to deploy state-of-the-art super-resolution.
 
 ## Credits
 
@@ -28,7 +28,7 @@ Special thanks to [xinntao](https://github.com/xinntao) and all contributors for
 ## Project Structure
 
 - `src/`: Core implementation logic.
-    - `handler.py`: RunPod worker entry point.
+    - `handler.py`: Runpod worker entry point.
     - `utils.py`: Image processing and utility functions.
 - `test/`: Project tests.
 - `Dockerfile`: Production-ready Docker configuration.
@@ -48,7 +48,7 @@ uv sync
 uv run pytest
 ```
 
-### Simulating a RunPod Job
+### Simulating a Runpod Job
 1. Configure your input in `test_input.json`.
 2. (Optional) Set the path to your local Real-ESRGAN binary:
    ```bash
@@ -67,7 +67,7 @@ docker build -t your-registry/runpod-real-esrgan:latest .
 docker push your-registry/runpod-real-esrgan:latest
 ```
 
-### 2. Configure RunPod
+### 2. Configure Runpod
 - Create a new **Serverless Endpoint**.
 - Use the image built in the previous step.
 - Ensure the template has appropriate GPU resources.
