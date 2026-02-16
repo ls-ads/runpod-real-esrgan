@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
+# NVIDIA Driver Capabilities
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all
+
 # Set environment variable for binary path
 ENV REAL_ESRGAN_BIN=/app/realesrgan-ncnn-vulkan
 
