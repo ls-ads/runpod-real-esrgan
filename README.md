@@ -39,9 +39,7 @@ Special thanks to [xinntao](https://github.com/xinntao) and all contributors for
 Manage dependencies and run locally using [uv](https://astral.sh/uv).
 
 ### Setup
-```bash
-uv sync
-```
+Dependencies are managed automatically by `uv`.
 
 ### Running Unit Tests
 ```bash

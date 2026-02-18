@@ -48,7 +48,8 @@ def test_handler_mock(mock_cleanup, mock_encode, mock_decode, mock_download, moc
 
     # Verify that the command was built correctly with all options
     args = mock_run.call_args[0][0]
-    assert "/app/realesrgan-ncnn-vulkan" in args or "./realesrgan-ncnn-vulkan" in args
+    binary_path = os.environ.get("REAL_ESRGAN_BIN", "/app/realesrgan-ncnn-vulkan")
+    assert binary_path in args
     assert "-x" in args  # TTA
     assert "-f" in args  # format
     assert "webp" in args
