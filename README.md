@@ -1,8 +1,26 @@
-# Runpod Real-ESRGAN Worker
+# RunPod Real-ESRGAN Monorepo
 
-A high-performance Runpod serverless worker for image upscaling using the NCNN Vulkan implementation of Real-ESRGAN.
+This repository contains multiple high-performance [RunPod](https://www.runpod.io/) serverless worker implementations for [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) image upscaling.
 
-This project packages the official [Real-ESRGAN-ncnn-vulkan](https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan) binary into a Runpod-compatible Docker image, providing a highly scalable and cost-effective way to deploy state-of-the-art super-resolution.
+## Implementations
+
+Each directory contains a standalone implementation with its own `Dockerfile` and dependencies.
+
+- [**ncnn-vulkan/**](./ncnn-vulkan): High-performance NCNN implementation that runs on Vulkan. Optimized for efficiency and doesn't require a full CUDA stack.
+- [**pytorch/**](./pytorch): (Work in Progress) Standard PyTorch implementation using the original weights.
+- [**onnx/**](./onnx): (Work in Progress) Optimized ONNX Runtime implementation with TensorRT and CUDA execution providers.
+- [**tensor-rt/**](./tensor-rt): (Work in Progress) Direct TensorRT implementation for maximum performance on NVIDIA GPUs.
+
+## Getting Started
+
+To get started with a specific implementation, navigate to its directory and follow the instructions in its `README.md`.
+
+For example, to use the NCNN Vulkan implementation:
+
+```bash
+cd ncnn-vulkan
+# Follow instructions in ncnn-vulkan/README.md
+```
 
 ## Credits
 
@@ -13,74 +31,6 @@ This project is a wrapper around the hard work of the following projects:
 
 Special thanks to [xinntao](https://github.com/xinntao) and all contributors for these incredible projects.
 
-## Features
+## Contributing
 
-- **High Performance**: Optimized for GPU acceleration via Vulkan (no full CUDA stack required).
-- **Flexible Input**: Supports both `image_url` and `image_base64`.
-- **Advanced Controls**: Fully supports NCNN binary parameters:
-    - **TTA Mode**: Test-time augmentation for higher quality.
-    - **Custom Scales**: Upscale by 2x, 3x, or 4x.
-    - **Model Selection**: Choose between `realesrgan-x4plus`, `realesrgan-x4plus-anime`, `realesr-animevideov3`, and more.
-    - **Thread Tuning**: Customize `load:proc:save` thread counts for performance optimization.
-    - **Tiling**: Adjustable `tile_size` for processing large images on limited GPU memory.
-- **Developer Friendly**: Built with `uv` for dependency management and `pytest` for unit testing.
-
-## Project Structure
-
-- `src/`: Core implementation logic.
-    - `handler.py`: Runpod worker entry point.
-    - `utils.py`: Image processing and utility functions.
-- `test/`: Project tests.
-- `Dockerfile`: Production-ready Docker configuration.
-- `test_input.json`: Local testing configuration.
-
-## Local Development
-
-Manage dependencies and run locally using [uv](https://astral.sh/uv).
-
-### Setup
-Dependencies are managed automatically by `uv`.
-
-### Running Unit Tests
-```bash
-uv run pytest
-```
-
-### Simulating a Runpod Job
-1. Configure your input in `test_input.json`.
-2. (Optional) Set the path to your local Real-ESRGAN binary:
-   ```bash
-   export REAL_ESRGAN_BIN=/path/to/your/binary
-   ```
-3. Run the handler:
-   ```bash
-   uv run python src/handler.py --rp_server_api
-   ```
-
-## Deployment
-
-### 1. Build & Push Image
-```bash
-docker build -t your-registry/runpod-real-esrgan:latest .
-docker push your-registry/runpod-real-esrgan:latest
-```
-
-### 2. Configure Runpod
-- Create a new **Serverless Endpoint**.
-- Use the image built in the previous step.
-- Ensure the template has appropriate GPU resources.
-
-### 3. API Usage
-Send a job with the following input schema:
-
-```json
-{
-  "input": {
-    "image_url": "https://example.com/image.jpg",
-    "model_name": "realesrgan-x4plus",
-    "scale": 4,
-    "tta": true,
-    "format": "webp"
-  }
-}
-```
+This is a monorepo setup to experiment with different deployment patterns for upscaling models. Contributions of new engines or optimizations for existing ones are welcome!
