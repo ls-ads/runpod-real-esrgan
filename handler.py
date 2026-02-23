@@ -113,19 +113,21 @@ def fetch_image(image_url, image_base64, job_id=None):
         if ";base64," in image_base64:
             image_base64 = image_base64.split(";base64,")[1]
         img_bytes = base64.b64decode(image_base64)
+        filename = "image_base64"
     else:
         r = requests.get(image_url)
         r.raise_for_status()
         img_bytes = r.content
-    return img_bytes
+        filename = "image_url"
+    return img_bytes, filename
 
-def upscale_image(img_bytes, out_format, job_id=None):
+def upscale_image(img_bytes, filename, out_format, job_id=None):
     """Proxy image to the TensorRT daemon for upscaling."""
     log.debug("Upscaling image via TensorRT daemon...", request_id=job_id)
     if not out_format.startswith('.'):
         out_format = f".{out_format}"
 
-    files = {'image': ('input.jpg', img_bytes, 'application/octet-stream')}
+    files = {'image': (filename, img_bytes, 'application/octet-stream')}
     url = f"http://localhost:8080/upscale?ext={out_format}"
     
     r = requests.post(url, files=files)
@@ -160,7 +162,7 @@ def handler(job):
         out_format = payload.output_format
 
         # Fetch/decode image
-        img_bytes = fetch_image(image_url, image_base64, job_id=job_id)
+        img_bytes, filename = fetch_image(image_url, image_base64, job_id=job_id)
 
         # Get original resolution
         with Image.open(BytesIO(img_bytes)) as img:
@@ -169,7 +171,7 @@ def handler(job):
                 raise ValueError(f"Image dimensions ({input_width}x{input_height}) exceed the maximum allowed size of 1280x1280.")
 
         # Upscale image
-        b64_out, ret_format = upscale_image(img_bytes, out_format, job_id=job_id)
+        b64_out, ret_format = upscale_image(img_bytes, filename, out_format, job_id=job_id)
 
         # Calculate output resolution (realesrgan-x4plus is fixed 4x)
         output_width = input_width * 4
