@@ -23,13 +23,23 @@ docker build -t runpod-real-esrgan-worker .
 
 ## RunPod Serverless Payload
 
-Your `input` JSON payload sent to the RunPod API must conform to the following schema:
+Your `input` JSON payload sent to the RunPod API must conform to the following schema. You can provide an image either via a URL (`image_url`) or as a base64 encoded string (`image_base64`).
 
+**Example using Image URL (Recommended for Testing):**
 ```json
 {
   "input": {
-    "image_url": "https://example.com/input.jpg",
-    "image_base64": "...", 
+    "image_url": "https://raw.githubusercontent.com/xinntao/Real-ESRGAN/master/inputs/0014.jpg",
+    "output_format": "jpg" 
+  }
+}
+```
+
+**Example using Base64:**
+```json
+{
+  "input": {
+    "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
     "output_format": "jpg" 
   }
 }
@@ -48,7 +58,7 @@ The worker will return the processed image encoded in base64 within the `output`
 ```json
 {
   "output": {
-    "image_base64": "...",
+    "image_base64": "iVBORw0KGgo...",
     "model": "realesrgan-x4plus",
     "input_resolution": "1280x720",
     "output_resolution": "5120x2880",
