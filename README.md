@@ -1,36 +1,68 @@
-# RunPod Real-ESRGAN Monorepo
+# RunPod Real-ESRGAN TensorRT Worker
 
-This repository contains multiple high-performance [RunPod](https://www.runpod.io/) serverless worker implementations for [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) image upscaling.
+A highly-optimized Python-based RunPod Serverless worker for deploying a **TensorRT (C/C++)** implementation of Real-ESRGAN. Optimized specifically for the `realesrgan-x4plus` model.
 
-## Implementations
+## Internal Architecture
 
-Each directory contains a standalone implementation with its own `Dockerfile` and dependencies.
+This serverless worker natively connects to RunPod's job queue using the official **RunPod Python SDK** while avoiding Cold-Start VRAM latency. 
 
-- [**ncnn-vulkan/**](./ncnn-vulkan): High-performance NCNN implementation that runs on Vulkan. Optimized for efficiency and doesn't require a full CUDA stack.
-- [**pytorch/**](./pytorch): (Work in Progress) Standard PyTorch implementation using the original weights.
-- [**onnx/**](./onnx): (Work in Progress) Optimized ONNX Runtime implementation with TensorRT and CUDA execution providers.
-- [**tensor-rt/**](./tensor-rt): (Work in Progress) Direct TensorRT implementation for maximum performance on NVIDIA GPUs.
+Dynamically at inference initialization before accepting jobs, the `handler.py` script performs:
 
-## Getting Started
+1. **Auto-Detects Hardware**: Queries `nvidia-smi` and the installed `libnvinfer` (TensorRT) engine compatibility version.
+2. **Auto-Downloads Engine**: Pulls the mathematically exact serialized `.engine` cache file from `ls-ads/real-esrgan-serve` matching the specific GPU architecture (e.g., `sm86`, `sm89`, `sm90`).
+3. **Warms Up VRAM**: Launches the internal C++ API wrapper daemon to keep the 4x model constantly hot inside GPU memory.
+4. **Proxies Serverless Invocations**: Your RunPod `POST /run` JSON calls are parsed by the Python SDK and proxied locally into the pre-warmed TensorRT daemon.
 
-To get started with a specific implementation, navigate to its directory and follow the instructions in its `README.md`.
+## Installation Requirements
 
-For example, to use the NCNN Vulkan implementation:
+Since this worker container auto-builds from the official TensorRT and CUDA Toolkit images, you simply need Docker to build it. 
 
 ```bash
-cd ncnn-vulkan
-# Follow instructions in ncnn-vulkan/README.md
+docker build -t runpod-real-esrgan-worker .
 ```
 
-## Credits
+## RunPod Serverless Payload
 
-This project is a wrapper around the hard work of the following projects:
+Your `input` JSON payload sent to the RunPod API must conform to the following schema:
 
-- [**Real-ESRGAN-ncnn-vulkan**](https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan): The ncnn implementation of Real-ESRGAN.
-- [**Real-ESRGAN**](https://github.com/xinntao/Real-ESRGAN): The original training and implementation project for Real-ESRGAN.
+```json
+{
+  "input": {
+    "image_url": "https://example.com/input.jpg",
+    "image_base64": "...", 
+    "format": "png" 
+  }
+}
+```
 
-Special thanks to [xinntao](https://github.com/xinntao) and all contributors for these incredible projects.
+*Note: You must provide EITHER `image_url` OR `image_base64`. `format` is optional (defaults to png).*
 
-## Contributing
+*Note: The upscale ratio is fixed to 4x, as this is optimized specifically for `realesrgan-x4plus`.*
 
-This is a monorepo setup to experiment with different deployment patterns for upscaling models. Contributions of new engines or optimizations for existing ones are welcome!
+### Output Payload
+
+The worker will return the processed image encoded in base64 within the `output` wrapper:
+
+```json
+{
+  "output": {
+    "image_base64": "...",
+    "model": "realesrgan-x4plus",
+    "input_resolution": "1920x1080",
+    "output_resolution": "7680x4320",
+    "format": "png"
+  }
+}
+```
+
+## Acknowledgements
+
+This project is a RunPod serverless wrapper over the incredible engineering of others:
+
+- **real-esrgan-serve**: [ls-ads/real-esrgan-serve](https://github.com/ls-ads/real-esrgan-serve)
+- **Original Project**: [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN)
+- **Author**: [xinntao](https://github.com/xinntao)
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
