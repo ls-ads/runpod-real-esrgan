@@ -30,14 +30,16 @@ Your `input` JSON payload sent to the RunPod API must conform to the following s
   "input": {
     "image_url": "https://example.com/input.jpg",
     "image_base64": "...", 
-    "format": "png" 
+    "output_format": "jpg" 
   }
 }
 ```
 
-*Note: You must provide EITHER `image_url` OR `image_base64`. `format` is optional (defaults to png).*
+*Note: You must provide EITHER `image_url` OR `image_base64`. `output_format` is optional (defaults to jpg).*
 
 *Note: The upscale ratio is fixed to 4x, as this is optimized specifically for `realesrgan-x4plus`.*
+
+*Note: The maximum input image dimensions supported by this worker are 1280x1280. Images exceeding this limit will be rejected to prevent out-of-memory errors.*
 
 ### Output Payload
 
@@ -48,9 +50,9 @@ The worker will return the processed image encoded in base64 within the `output`
   "output": {
     "image_base64": "...",
     "model": "realesrgan-x4plus",
-    "input_resolution": "1920x1080",
-    "output_resolution": "7680x4320",
-    "format": "png"
+    "input_resolution": "1280x720",
+    "output_resolution": "5120x2880",
+    "output_format": "jpg"
   }
 }
 ```

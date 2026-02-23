@@ -16,7 +16,7 @@ log = RunPodLogger()
 class InputPayload(BaseModel):
     image_url: Optional[str] = None
     image_base64: Optional[str] = None
-    format: Literal["png", "jpg"] = "png"
+    output_format: Literal["png", "jpg"] = "jpg"
 
     @model_validator(mode='after')
     def check_image_provided(self):
@@ -156,7 +156,7 @@ def handler(job):
         
         image_url = payload.image_url
         image_base64 = payload.image_base64
-        out_format = payload.format
+        out_format = payload.output_format
 
         # Fetch/decode image
         img_bytes = fetch_image(image_url, image_base64)
@@ -164,6 +164,8 @@ def handler(job):
         # Get original resolution
         with Image.open(BytesIO(img_bytes)) as img:
             input_width, input_height = img.size
+            if input_width > 1280 or input_height > 1280:
+                raise ValueError(f"Image dimensions ({input_width}x{input_height}) exceed the maximum allowed size of 1280x1280.")
 
         # Upscale image
         b64_out, ret_format = upscale_image(img_bytes, out_format)
@@ -179,7 +181,7 @@ def handler(job):
             "model": "realesrgan-x4plus",
             "input_resolution": f"{input_width}x{input_height}",
             "output_resolution": f"{output_width}x{output_height}",
-            "format": ret_format
+            "output_format": ret_format
         }
 
     except Exception as e:
