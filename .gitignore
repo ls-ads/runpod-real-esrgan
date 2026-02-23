@@ -45,8 +45,5 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Binaries
-realesrgan-ncnn-vulkan
-
 # Testing
 .pytest_cache/
