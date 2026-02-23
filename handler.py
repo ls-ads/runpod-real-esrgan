@@ -106,9 +106,9 @@ def initialize_worker():
     log.info("real-esrgan-serve is warmed up and ready!")
     return serve_proc
 
-def fetch_image(image_url, image_base64):
+def fetch_image(image_url, image_base64, job_id=None):
     """Preprocess and fetch the image."""
-    log.debug("Fetching and decoding image...")
+    log.debug("Fetching and decoding image...", request_id=job_id)
     if image_base64:
         if ";base64," in image_base64:
             image_base64 = image_base64.split(";base64,")[1]
@@ -119,9 +119,9 @@ def fetch_image(image_url, image_base64):
         img_bytes = r.content
     return img_bytes
 
-def upscale_image(img_bytes, out_format):
+def upscale_image(img_bytes, out_format, job_id=None):
     """Proxy image to the TensorRT daemon for upscaling."""
-    log.debug("Upscaling image via TensorRT daemon...")
+    log.debug("Upscaling image via TensorRT daemon...", request_id=job_id)
     if not out_format.startswith('.'):
         out_format = f".{out_format}"
 
@@ -146,12 +146,13 @@ def upscale_image(img_bytes, out_format):
 initialize_worker()
 
 def handler(job):
+    job_id = job.get('id')
     try:
         # Input validation
         try:
             payload = InputPayload.model_validate(job.get('input', {}))
         except ValidationError as e:
-            log.error(f"Validation error: {e}")
+            log.error(f"Validation error: {e}", request_id=job_id)
             return {"error": str(e)}
         
         image_url = payload.image_url
@@ -159,7 +160,7 @@ def handler(job):
         out_format = payload.output_format
 
         # Fetch/decode image
-        img_bytes = fetch_image(image_url, image_base64)
+        img_bytes = fetch_image(image_url, image_base64, job_id=job_id)
 
         # Get original resolution
         with Image.open(BytesIO(img_bytes)) as img:
@@ -168,13 +169,13 @@ def handler(job):
                 raise ValueError(f"Image dimensions ({input_width}x{input_height}) exceed the maximum allowed size of 1280x1280.")
 
         # Upscale image
-        b64_out, ret_format = upscale_image(img_bytes, out_format)
+        b64_out, ret_format = upscale_image(img_bytes, out_format, job_id=job_id)
 
         # Calculate output resolution (realesrgan-x4plus is fixed 4x)
         output_width = input_width * 4
         output_height = input_height * 4
 
-        log.info("Upscaling completed successfully")
+        log.info("Upscaling completed successfully", request_id=job_id)
 
         return {
             "image_base64": b64_out,
@@ -185,7 +186,7 @@ def handler(job):
         }
 
     except Exception as e:
-        log.error(f"An error occurred: {str(e)}")
+        log.error(f"An error occurred: {str(e)}", request_id=job_id)
         return {"error": str(e)}
 
 runpod.serverless.start({"handler": handler})
