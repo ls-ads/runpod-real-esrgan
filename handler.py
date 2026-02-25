@@ -8,6 +8,7 @@ import requests
 import time
 import base64
 import sys
+import re
 from io import BytesIO
 from PIL import Image
 
@@ -40,19 +41,42 @@ def detect_trt_version():
         log.error(f"TRT detect error: {e}")
         return "unknown"
 
-def detect_gpu_arch():
+def detect_gpu_info():
     try:
-        # nvidia-smi --query-gpu=compute_cap --format=csv,noheader
-        res = subprocess.run(["nvidia-smi", "--query-gpu=compute_cap", "--format=csv,noheader"], capture_output=True, text=True)
-        cap = res.stdout.strip().split('\n')[0].strip()
-        return "sm" + cap.replace('.', '')
+        # nvidia-smi --query-gpu=gpu_name,compute_cap --format=csv,noheader
+        res = subprocess.run(["nvidia-smi", "--query-gpu=gpu_name,compute_cap", "--format=csv,noheader"], capture_output=True, text=True)
+        lines = res.stdout.strip().split('\n')
+        if not lines:
+            return "unknown", "unknown"
+        
+        parts = lines[0].split(',')
+        if len(parts) < 2:
+            return "unknown", "unknown"
+            
+        gpu_name = parts[0].strip()
+        cap = parts[1].strip()
+        arch = "sm" + cap.replace('.', '')
+        
+        return gpu_name, arch
     except Exception as e:
         log.error(f"GPU detect error: {e}")
-        return "unknown"
+        return "unknown", "unknown"
 
-def download_engine(trt_ver, arch):
+def sanitize_gpu_name(name):
+    """
+    Sanitize GPU name to match the bash script:
+    GPU_NAME_SAN=$(echo "$GPU_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\{1,\}/-/g' | sed 's/^-//;s/-$//')
+    """
+    san = name.lower()
+    san = re.sub(r'[^a-z0-9]', '-', san)
+    san = re.sub(r'-+', '-', san)
+    return san.strip('-')
+
+def download_engine(trt_ver, gpu_name, arch):
     os.makedirs("/workspace", exist_ok=True)
-    engine_name = f"realesrgan-x4plus-{arch}-trt{trt_ver}.engine"
+    
+    gpu_name_san = sanitize_gpu_name(gpu_name)
+    engine_name = f"realesrgan-x4plus-{gpu_name_san}-{arch}-trt{trt_ver}_fp16.engine"
     engine_url = f"https://github.com/ls-ads/real-esrgan-serve/releases/download/v0.1.0/{engine_name}"
     engine_path = f"/workspace/{engine_name}"
     
@@ -90,10 +114,10 @@ def initialize_worker():
     log.info("Initializing RunPod Real-ESRGAN TensorRT Worker (Python SDK)...")
 
     trt_ver = detect_trt_version()
-    arch = detect_gpu_arch()
-    log.info(f"Detected TRT: {trt_ver}, Architecture: {arch}")
+    gpu_name, arch = detect_gpu_info()
+    log.info(f"Detected TRT: {trt_ver}, GPU: {gpu_name}, Architecture: {arch}")
 
-    engine_path = download_engine(trt_ver, arch)
+    engine_path = download_engine(trt_ver, gpu_name, arch)
 
     log.info("Starting real-esrgan-serve HTTP server...")
     serve_cmd = ["/app/real-esrgan-serve", "server", "start", "-p", "8080", "--engine", engine_path, "--gpu-id", "0"]
