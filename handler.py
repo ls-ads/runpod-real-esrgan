@@ -17,12 +17,14 @@ log = RunPodLogger()
 class InputPayload(BaseModel):
     image_url: Optional[str] = None
     image_base64: Optional[str] = None
+    image_path: Optional[str] = None
+    output_path: Optional[str] = None
     output_format: Literal["png", "jpg"] = "jpg"
 
     @model_validator(mode='after')
     def check_image_provided(self):
-        if not self.image_url and not self.image_base64:
-            raise ValueError("No input image provided. Please provide image_url or image_base64.")
+        if not self.image_url and not self.image_base64 and not self.image_path:
+            raise ValueError("No input image provided. Please provide image_url, image_base64, or image_path.")
         return self
 
 def detect_trt_version():
@@ -181,25 +183,56 @@ def handler(job):
             log.error(f"Validation error: {e}", request_id=job_id)
             return {"error": str(e)}
         
-        image_url = payload.image_url
-        image_base64 = payload.image_base64
-        out_format = payload.output_format
+        # Fetch/decode image or use local path
+        if payload.image_path:
+            abs_input = payload.image_path
+            if not abs_input.startswith("/"):
+                abs_input = os.path.join("/workspace", abs_input)
 
-        # Fetch/decode image
-        img_bytes, filename = fetch_image(image_url, image_base64, job_id=job_id)
+            if not os.path.exists(abs_input):
+                log.error(f"Image path not found: {abs_input}", request_id=job_id)
+                return {"error": f"Image path not found: {abs_input}"}
+            
+            with open(abs_input, 'rb') as f:
+                img_bytes = f.read()
+            filename = os.path.basename(abs_input)
+            image_url = None
+            image_base64 = None
+        else:
+            image_url = payload.image_url
+            image_base64 = payload.image_base64
+            # Fetch/decode image
+            img_bytes, filename = fetch_image(image_url, image_base64, job_id=job_id)
+
+        out_format = payload.output_format
 
         # Get original resolution
         with Image.open(BytesIO(img_bytes)) as img:
             input_width, input_height = img.size
             if input_width > 1280 or input_height > 1280:
                 raise ValueError(f"Image dimensions ({input_width}x{input_height}) exceed the maximum allowed size of 1280x1280.")
+            output_width, output_height = input_width * 4, input_height * 4
 
         # Upscale image
         b64_out, ret_format = upscale_image(img_bytes, filename, out_format, job_id=job_id)
 
-        # Calculate output resolution (realesrgan-x4plus is fixed 4x)
-        output_width = input_width * 4
-        output_height = input_height * 4
+        # Handle local output if requested
+        if payload.output_path:
+            abs_output = payload.output_path
+            if not abs_output.startswith("/"):
+                abs_output = os.path.join("/workspace", abs_output)
+
+            os.makedirs(os.path.dirname(abs_output), exist_ok=True)
+            with open(abs_output, 'wb') as f:
+                f.write(base64.b64decode(b64_out))
+            
+            log.info(f"Upscaling completed successfully to {abs_output}", request_id=job_id)
+            return {
+                "output_path": payload.output_path,
+                "model": "realesrgan-x4plus",
+                "input_resolution": f"{input_width}x{input_height}",
+                "output_format": ret_format
+            }
 
         log.info("Upscaling completed successfully", request_id=job_id)
 
